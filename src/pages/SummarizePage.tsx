@@ -29,8 +29,35 @@ const SummarizePage: React.FC = () => {
   const isYouTube = (url: string) => /youtube\.com|youtu\.be/.test(url);
 
   const getYouTubeEmbedUrl = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+
+      // youtu.be short link
+      if (host.includes('youtu.be')) {
+        const id = u.pathname.slice(1).split(/[/?]/)[0];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+
+      // youtube.com paths: /watch, /embed, /shorts
+      const pathname = u.pathname;
+      // /shorts/VIDEO_ID
+      if (pathname.startsWith('/shorts/')) {
+        const parts = pathname.split('/');
+        const id = parts[2] || parts[1];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+
+      // query param v
+      const v = u.searchParams.get('v');
+      if (v) return `https://www.youtube.com/embed/${v}`;
+
+      // embed path
+      const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11,})/);
+      if (embedMatch) return `https://www.youtube.com/embed/${embedMatch[1]}`;
+    } catch (e) {
+      // fallthrough
+    }
     return null;
   };
 
